@@ -5,12 +5,27 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+    - name: Set image tag
+      id: vars
+      run: echo "tag=$(date +%s)" >> $GITHUB_OUTPUT
+
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag provisioner-flask:$(date +%s)
+      run: |
+        docker build . -f Dockerfile \
+          -t ${{ secrets.DOCKERHUB_USERNAME }}/provisioner-flask:${{ steps.vars.outputs.tag }} \
+          -t ${{ secrets.DOCKERHUB_USERNAME }}/provisioner-flask:latest
+
+    - name: Push image with version tag
+      run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/provisioner-flask:${{ steps.vars.outputs.tag }}
+
+    - name: Push image with latest tag
+      run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/provisioner-flask:latest
